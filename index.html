@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paint Plotter Sim</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <aside id="panel">
+      <h1>Paint Plotter Sim</h1>
+
+      <section>
+        <h2>Project</h2>
+        <input type="text" id="project-name" class="text full" value="Untitled painting" title="Project name (used as the file name)" />
+        <div class="row" style="margin-top: 8px">
+          <button id="project-save" title="Save everything to a .paintsim file (Ctrl+S)">Save project</button>
+          <button id="project-open" title="Open a .paintsim file (Ctrl+O)">Open project…</button>
+        </div>
+        <input type="file" id="project-file" accept=".paintsim" hidden />
+        <p class="hint" id="project-info">Saves the canvas, paint (still editable), brush paths, color guide, palette and settings in one file.</p>
+      </section>
+
+      <section>
+        <h2>Tool</h2>
+        <div class="seg" id="tools">
+          <button data-tool="select">Select</button>
+          <button data-tool="dot" class="active">Dot</button>
+          <button data-tool="line">Line</button>
+          <button data-tool="path">Path</button>
+        </div>
+        <div id="line-options" hidden>
+          <div class="seg small" id="line-modes">
+            <button data-mode="freehand" class="active">Freehand</button>
+            <button data-mode="straight">Straight</button>
+            <button data-mode="angle">Angle</button>
+          </div>
+          <label class="num" id="line-angle-row" hidden>Angle (°, 0 = right, 90 = up)
+            <input type="number" id="line-angle" step="1" value="45" />
+          </label>
+        </div>
+        <p class="hint" id="tool-hint"></p>
+      </section>
+
+      <section id="selection-panel" hidden>
+        <h2>Selected paint</h2>
+        <div class="row">
+          <input type="color" id="sel-color" />
+          <span class="hint" id="sel-kind"></span>
+        </div>
+        <div id="sel-swatches" class="palette small" title="Recolor the selection"></div>
+        <label>Size <span id="sel-radius-val"></span>
+          <input type="range" id="sel-radius" min="2" max="40" step="0.5" />
+        </label>
+        <label>Thickness <span id="sel-thickness-val"></span>
+          <input type="range" id="sel-thickness" min="0.3" max="5" step="0.1" />
+        </label>
+        <label>Pigment strength <span id="sel-pigment-val"></span>
+          <input type="range" id="sel-pigment" min="0.2" max="3" step="0.05" />
+        </label>
+        <label>Viscosity <span id="sel-visc-val"></span>
+          <input type="range" id="sel-visc" min="0" max="1" step="0.01" />
+        </label>
+        <div class="chips" id="sel-visc-presets"></div>
+        <label>Surface tension <span id="sel-tension-val"></span>
+          <input type="range" id="sel-tension" min="0" max="1" step="0.01" />
+        </label>
+        <div class="grid2" id="sel-line-geom">
+          <label class="num">Length (mm) <input type="number" id="sel-length" step="1" min="0" /></label>
+          <label class="num">Angle (°) <input type="number" id="sel-angle" step="1" /></label>
+        </div>
+        <div class="grid2" style="margin-top: 8px">
+          <button id="sel-copy" title="Ctrl+C">Copy</button>
+          <button id="sel-paste" title="Ctrl+V">Paste</button>
+          <button id="sel-duplicate" title="Ctrl+D">Duplicate</button>
+          <button id="sel-delete" title="Delete">Delete</button>
+        </div>
+        <p class="hint">Drag to move, drag an end handle to reshape a straight line. Arrow keys nudge (Shift = 10×).</p>
+      </section>
+
+      <section>
+        <h2>Path</h2>
+        <div class="row">
+          <button id="svg-import">Import SVG…</button>
+          <button id="svg-remove" hidden>Remove</button>
+        </div>
+        <input type="file" id="svg-file" accept=".svg,image/svg+xml" hidden />
+        <p class="hint" id="svg-info">Or drop an SVG file onto the canvas.</p>
+        <div id="svg-controls" hidden>
+          <div class="row">
+            <button id="svg-fit">Fit to canvas</button>
+            <button id="svg-actual">Actual size</button>
+          </div>
+          <label>Scale <span id="svg-scale-val"></span>
+            <input type="range" id="svg-scale" min="5" max="400" step="1" value="100" />
+          </label>
+          <label>Rotation <span id="svg-rot-val"></span>
+            <input type="range" id="svg-rot" min="-180" max="180" step="1" value="0" />
+          </label>
+          <div class="grid2">
+            <label class="num">X (mm) <input type="number" id="svg-x" step="1" /></label>
+            <label class="num">Y (mm) <input type="number" id="svg-y" step="1" /></label>
+          </div>
+          <label class="check"><input type="checkbox" id="svg-optimize" /> Reorder strokes to cut travel</label>
+        </div>
+        <p class="hint" id="path-stats"></p>
+      </section>
+
+      <section>
+        <h2>Color guide</h2>
+        <div class="row">
+          <button id="guide-import" title="An SVG or image showing where colors change">Import guide…</button>
+          <button id="guide-toggle" title="Show or hide the guide (G)" hidden>Hide</button>
+          <button id="guide-remove" hidden>Remove</button>
+        </div>
+        <input type="file" id="guide-file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp" hidden />
+        <label>Placement
+          <select id="guide-place">
+            <option value="fit">Fit to canvas</option>
+            <option value="actual">Actual size</option>
+            <option value="path">Use Path settings (scale, rotation, X/Y)</option>
+          </select>
+        </label>
+        <label id="guide-opacity-row" hidden>Opacity <span id="guide-opacity-val"></span>
+          <input type="range" id="guide-opacity" min="10" max="100" step="5" value="70" />
+        </label>
+        <p class="hint" id="guide-info">A reference layer showing where colors change. It's never painted. Press G to show or hide it.</p>
+      </section>
+
+      <section>
+        <h2>Paint</h2>
+        <div class="row">
+          <input type="color" id="paint-color" value="#1f4fb5" title="Paint color" />
+          <input type="text" id="palette-name" class="text" placeholder="Palette name" title="Palette name" />
+        </div>
+        <div id="swatches" class="palette"></div>
+        <div class="palette-actions">
+          <button id="palette-add" title="Add the current paint color to the palette">Add</button>
+          <button id="palette-remove" title="Remove the selected swatch">Remove</button>
+          <button id="palette-left" title="Move the selected swatch left">◀</button>
+          <button id="palette-right" title="Move the selected swatch right">▶</button>
+          <button id="palette-import" title="Load a palette (.gpl, .json, or a list of hex codes)">Import</button>
+          <button id="palette-export" title="Save the palette as a .gpl file (works in Inkscape and GIMP too)">Export</button>
+        </div>
+        <input type="file" id="palette-file" accept=".gpl,.json,.txt,.hex,text/plain,application/json" hidden />
+        <input type="color" id="palette-edit" class="offscreen" tabindex="-1" aria-hidden="true" />
+        <p class="hint" id="palette-hint">Click a swatch to paint with it, double-click to change it.</p>
+        <label>Size <span id="paint-size-val"></span>
+          <input type="range" id="paint-size" min="2" max="40" value="10" />
+        </label>
+        <label>Thickness <span id="paint-amount-val"></span>
+          <input type="range" id="paint-amount" min="0.3" max="5" step="0.1" value="2" />
+        </label>
+        <label>Pigment strength <span id="pigment-val"></span>
+          <input type="range" id="pigment" min="0.2" max="3" step="0.05" value="1" />
+        </label>
+        <label>Viscosity <span id="paint-visc-val"></span>
+          <input type="range" id="paint-visc" min="0" max="1" step="0.01" value="0.25" />
+        </label>
+        <div class="chips" id="visc-presets"></div>
+        <label>Surface tension <span id="surface-tension-val"></span>
+          <input type="range" id="surface-tension" min="0" max="1" step="0.01" value="0.85" />
+        </label>
+        <p class="hint">Surface tension high: edges stay where the paint was laid and ridges round up; low: paint wets the canvas and puddles. These settings apply to new paint; change placed paint in Selected paint.</p>
+
+        <h3>Paint lines from an SVG</h3>
+        <button id="paint-svg-import" style="width: 100%">Import paint lines SVG…</button>
+        <input type="file" id="paint-svg-file" accept=".svg,image/svg+xml" hidden />
+        <label class="check"><input type="checkbox" id="paint-svg-colors" checked /> Use the SVG's line colors</label>
+        <label class="check"><input type="checkbox" id="paint-svg-widths" /> Use the SVG's line widths</label>
+        <label>Placement
+          <select id="paint-svg-place">
+            <option value="actual">Actual size (SVG page corner on canvas corner)</option>
+            <option value="fit">Fit to canvas</option>
+            <option value="path">Use Path settings (scale, rotation, X/Y)</option>
+          </select>
+        </label>
+        <p class="hint" id="paint-svg-info">Each line in the file becomes a paint line. Thickness and viscosity come from the settings above.</p>
+      </section>
+
+      <section>
+        <h2>Brush</h2>
+        <select id="brush-preset"></select>
+        <div id="brush-params"></div>
+      </section>
+
+      <section>
+        <h2>Run</h2>
+        <label>Speed <span id="speed-val"></span>
+          <input type="range" id="speed" min="5" max="600" step="5" value="95" />
+        </label>
+        <div class="row">
+          <button id="run" class="primary">Run brush</button>
+          <button id="stop">Stop</button>
+        </div>
+        <label class="check"><input type="checkbox" id="show-path" checked /> Show path</label>
+      </section>
+
+      <section>
+        <h2>Canvas</h2>
+        <label>Size <select id="canvas-size"></select></label>
+        <div class="grid2">
+          <label class="num">Width (mm) <input type="number" id="canvas-w" min="20" max="5000" step="1" value="300" /></label>
+          <label class="num">Height (mm) <input type="number" id="canvas-h" min="20" max="5000" step="1" value="200" /></label>
+        </div>
+        <div class="seg" id="orientation" style="margin-top: 8px">
+          <button data-o="landscape" class="active">Landscape</button>
+          <button data-o="portrait">Portrait</button>
+        </div>
+        <button id="canvas-match-svg" style="width: 100%; margin-top: 8px" hidden>Match SVG page size</button>
+        <p class="hint">Changing the canvas's proportions clears the paint.</p>
+        <div class="grid2">
+          <button id="demo">Lines demo</button>
+          <button id="demo-spiral">Spiral demo</button>
+          <button id="clear-paint">Clear paint</button>
+          <button id="clear-path">Clear path</button>
+          <button id="undo" style="grid-column: span 2">Undo</button>
+        </div>
+      </section>
+    </aside>
+
+    <main id="stage-area">
+      <div id="stage">
+        <div id="canvas-wrap">
+          <canvas id="paint"></canvas>
+          <img id="guide-layer" alt="" hidden />
+          <canvas id="overlay"></canvas>
+        </div>
+      </div>
+      <div id="zoom-bar" title="Ctrl + mouse wheel zooms; Space + drag or middle-drag pans">
+        <button id="zoom-out" title="Zoom out (−)">−</button>
+        <button id="zoom-fit" title="Fit to window (0)">100%</button>
+        <button id="zoom-in" title="Zoom in (+)">+</button>
+      </div>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
